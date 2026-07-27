@@ -114,7 +114,7 @@ When a connection reaches the relay port, the server signals the client, which o
 ## Build from Source
 
 ```bash
-git clone <repo> afisla
+git clone https://github.com/afisla/tunnel afisla
 cd afisla
 go build -o afisla .
 ```
