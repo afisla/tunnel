@@ -357,6 +357,8 @@ func (s *Server) handleHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+
+
 func (s *Server) serveStatic(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/")
 	if path == "" || path == "index.html" {

@@ -77,17 +77,33 @@ afisla client --port-local 8080 --domain myapp
 
 ## TCP Relay Usage
 
-Each tunnel gets an assigned TCP relay port (30000-40000).
+Each tunnel gets an assigned TCP relay port (30000-40000). Use it for any protocol: SSH, RDP, databases, game servers.
 
+### SSH
+
+On the machine behind NAT:
 ```bash
-# SSH through tunnel
-ssh -o ProxyCommand='nc -X CONNECT afisla.web.id %h' user@testing.afisla.web.id
-
-# Or using the relay port directly
-ssh -o "ProxyCommand=nc afisla.web.id 30000 %h" user@localhost -p 22
+afisla client --port-local 22 --domain myserver
+# → TCP: afisla.web.id:30000 (raw TCP relay)
 ```
 
-When a connection reaches the relay port, the server signals the client, which opens a relay back to the server and proxies raw bytes bidirectionally.
+From anywhere, SSH through the relay:
+```bash
+ssh -o ProxyCommand='nc afisla.web.id 30000' user@localhost -p 22
+```
+
+The `ProxyCommand` opens a raw TCP connection to the relay port — no `%h` needed.  
+SSH protocol bytes flow through the tunnel to the client machine's port 22.
+
+### Any TCP Service
+
+```bash
+# Local: expose any port
+afisla client --port-local 5432 --domain postgres
+
+# Remote: connect via relay port (shown after client connects)
+psql -h afisla.web.id -p RELAY_PORT -U user db
+```
 
 ## Server Options
 
