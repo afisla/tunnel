@@ -115,7 +115,7 @@ func (c *Client) readControl(ctrl net.Conn, tunnelURL string) {
 func (c *Client) handleRequest(ctrl net.Conn, req *HttpRequestMsg) {
 	bodyBytes, _ := base64.StdEncoding.DecodeString(req.Body)
 
-	targetURL := fmt.Sprintf("http://localhost:%s%s", c.localPort, req.Path)
+	targetURL := fmt.Sprintf("http://127.0.0.1:%s%s", c.localPort, req.Path)
 	httpReq, err := http.NewRequest(req.Method, targetURL, bytes.NewReader(bodyBytes))
 	if err != nil {
 		return
@@ -153,7 +153,7 @@ func (c *Client) handleRequest(ctrl net.Conn, req *HttpRequestMsg) {
 }
 
 func (c *Client) handleTCPOpen(msg *TcpOpenMsg) {
-	localAddr := fmt.Sprintf("localhost:%s", c.localPort)
+	localAddr := fmt.Sprintf("127.0.0.1:%s", c.localPort)
 	local, err := net.DialTimeout("tcp", localAddr, 10*time.Second)
 	if err != nil {
 		log.Printf("TCP relay local connect failed (%s): %v", msg.ConnID[:12], err)
@@ -174,7 +174,7 @@ func (c *Client) handleTCPOpen(msg *TcpOpenMsg) {
 		return
 	}
 
-	log.Printf("TCP relay active: %s -> localhost:%s", msg.FromAddr, c.localPort)
+	log.Printf("TCP relay active: %s -> 127.0.0.1:%s", msg.FromAddr, c.localPort)
 
 	var wg sync.WaitGroup
 	wg.Add(2)

@@ -82,7 +82,7 @@ func runServer(args []string) {
 }
 
 func runClient(args []string) {
-	tunnelHost := "afisla.web.id"
+	tunnelHost := "relay.afisla.web.id"
 	tunnelHTTP := "443"
 	tunnelCtrl := "6673"
 	tunnelRelay := "6674"
@@ -105,7 +105,7 @@ func runClient(args []string) {
 			if i+1 < len(args) { i++; domain = args[i] }
 		case args[i] == "-h" || args[i] == "--help":
 			fmt.Println(`Client options:
-  --host-tunnel      Tunnel server host (default afisla.web.id)
+  --host-tunnel      Tunnel relay host (default relay.afisla.web.id)
   --port-local       Local port to forward (default 8000)
   --domain           Requested subdomain (random if empty)
   --tunnel-http-port HTTP port (default 443)

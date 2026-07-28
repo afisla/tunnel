@@ -4,34 +4,36 @@ Afisla exposes your local server to the internet via a public URL. Supports **HT
 
 ```
 afisla client --port-local 8080 --domain testing
-→ https://testing.afisla.web.id   (HTTP)
-→ afisla.web.id:30000             (TCP relay)
+→ https://testing.afisla.web.id      (HTTP — via Cloudflare proxy)
+→ relay.afisla.web.id:30000          (TCP relay — direct)
 ```
 
-## Architecture
+## Dual-Domain Architecture
+
+Cloudflare **proxies** HTTP/HTTPS for `*.afisla.web.id`, while tunnel control traffic uses a separate DNS-only domain `relay.afisla.web.id` (direct IP, no proxy).
 
 ```
-Client (NAT)                          Server (public)
-┌─────────────────┐     control       ┌──────────────────────┐
-│  localhost:8080  │◄──── port 6673 ──►│  afisla server       │
-│  (app/service)   │                  │                      │
-│         │        │    relay data    │  HTTP :3376 ← Apache │
-│         │        │◄──── port 6674 ──►  Ctrl :6673          │
-│         │        │                  │  Relay:6674          │
-│         │        │                  │  TCP  :30000-40000   │
-└─────────────────┘                  └──────────────────────┘
-                                              │
-                                    HTTP ──► testing.afisla.web.id
-                                    TCP  ──► afisla.web.id:30000
+                                     Cloudflare (orange cloud)
+                                     ┌──────────────────────┐
+Browser ──► testing.afisla.web.id ──►│  *.afisla.web.id     │
+          (port 443)                  │  proxied via CF      │
+                                     └──────────┬───────────┘
+                                                │
+Client (NAT)                    Apache :80/443  ▼  Server (public)
+┌──────────────────┐              ┌──────────────────────────┐
+│  localhost:8080   │              │  afisla server           │
+│  (app/service)    │   control   │                           │
+│         │         │◄───6673 ────│  HTTP :3376 ← Apache      │
+│         │         │   relay     │  Ctrl :6673               │
+│         │         │◄───6674 ────│  Relay:6674               │
+│         │         │             │  TCP  :30000-40000        │
+└──────────────────┘             └──────────────────────────┘
+         ▲                                │
+         │  relay.afisla.web.id:30000     │
+         └────── direct (no proxy) ───────┘
 ```
 
 ## Quick Start
-
-### Server (already running on afisla.web.id)
-
-```bash
-afisla server --base-domain afisla.web.id
-```
 
 ### Client
 
@@ -42,9 +44,12 @@ afisla client --port-local 3000
 # Custom subdomain
 afisla client --port-local 8080 --domain testing
 # → https://testing.afisla.web.id forwards to localhost:8080
+```
 
-# Specific server
-afisla client --host-tunnel afisla.web.id --port-local 3000 --domain myapp
+### Server (already running)
+
+```bash
+afisla server --base-domain afisla.web.id
 ```
 
 ## Install on Client Machine
@@ -56,8 +61,8 @@ curl -fsSL https://afisla.web.id/install.sh | bash
 Or manually:
 
 ```bash
-# Download binary
-sudo curl -fsSLo /usr/local/bin/afisla https://afisla.web.id/afisla-linux-amd64
+# Download binary from GitHub releases
+sudo curl -fsSLo /usr/local/bin/afisla https://github.com/afisla/tunnel/releases/download/v0.4.0/afisla-linux-amd64
 sudo chmod +x /usr/local/bin/afisla
 
 # Run
@@ -68,32 +73,31 @@ afisla client --port-local 8080 --domain myapp
 
 | Feature | Description |
 |---|---|
-| **HTTP/HTTPS** | Route by subdomain via Apache. All HTTP methods, headers, bodies. |
+| **HTTP/HTTPS** | Route by subdomain via Cloudflare + Apache. All HTTP methods, headers, bodies. |
 | **TCP Relay** | Raw TCP forwarding for SSH, RDP, databases, game servers. |
 | **Custom Domain** | Request a specific subdomain with `--domain`. |
 | **Random Domain** | Auto-generated 6-char subdomain if `--domain` omitted. |
 | **Concurrent** | Multiple HTTP requests handled concurrently per tunnel. |
-| **TLS** | HTTPS via wildcard Let's Encrypt cert on afisla.web.id. |
+| **TLS** | HTTPS via Cloudflare edge + wildcard Let's Encrypt cert. |
+| **Cloudflare Proxy** | HTTP/HTTPS proxied through Cloudflare (DDoS protection, caching). |
+| **Dual-Domain** | HTTP via `*.afisla.web.id` (proxied), tunnel via `relay.afisla.web.id` (direct). |
 
 ## TCP Relay Usage
 
-Each tunnel gets an assigned TCP relay port (30000-40000). Use it for any protocol: SSH, RDP, databases, game servers.
+Each tunnel gets an assigned TCP relay port (30000-40000) on `relay.afisla.web.id`.
 
 ### SSH
 
 On the machine behind NAT:
 ```bash
 afisla client --port-local 22 --domain myserver
-# → TCP: afisla.web.id:30000 (raw TCP relay)
+# → TCP: relay.afisla.web.id:30000 (raw TCP relay)
 ```
 
 From anywhere, SSH through the relay:
 ```bash
-ssh -o ProxyCommand='nc afisla.web.id 30000' user@localhost -p 22
+ssh -o ProxyCommand='nc relay.afisla.web.id 30000' user@localhost -p 22
 ```
-
-The `ProxyCommand` opens a raw TCP connection to the relay port — no `%h` needed.  
-SSH protocol bytes flow through the tunnel to the client machine's port 22.
 
 ### Any TCP Service
 
@@ -101,8 +105,8 @@ SSH protocol bytes flow through the tunnel to the client machine's port 22.
 # Local: expose any port
 afisla client --port-local 5432 --domain postgres
 
-# Remote: connect via relay port (shown after client connects)
-psql -h afisla.web.id -p RELAY_PORT -U user db
+# Remote: connect via relay port
+psql -h relay.afisla.web.id -p 30000 -U user db
 ```
 
 ## Server Options
@@ -119,12 +123,12 @@ psql -h afisla.web.id -p RELAY_PORT -U user db
 ## Client Options
 
 ```
---port-local        Local port to forward     (default 8000)
---domain            Requested subdomain       (random if empty)
---host-tunnel       Server host               (default afisla.web.id)
---tunnel-http-port  Server HTTP port          (default 443)
---ctrl-port         Server control port       (default 6673)
---relay-port        Server relay data port    (default 6674)
+--port-local        Local port to forward         (default 8000)
+--domain            Requested subdomain           (random if empty)
+--host-tunnel       Tunnel relay host             (default relay.afisla.web.id)
+--tunnel-http-port  Server HTTP port              (default 443)
+--ctrl-port         Server control port           (default 6673)
+--relay-port        Server relay data port        (default 6674)
 ```
 
 ## Build from Source
