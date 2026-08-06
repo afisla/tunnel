@@ -125,7 +125,12 @@ func (c *Client) handleRequest(ctrl net.Conn, req *HttpRequestMsg) {
 	}
 	httpReq.Host = req.Host
 
-	httpClient := &http.Client{Timeout: 55 * time.Second}
+	httpClient := &http.Client{
+		Timeout: 55 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
 	resp, err := httpClient.Do(httpReq)
 	if err != nil {
 		log.Printf("Proxy error %s %s: %v", req.Method, req.Path, err)
