@@ -20,7 +20,7 @@ func main() {
 	case "client":
 		runClient(os.Args[2:])
 	case "version":
-		fmt.Println("afisla 0.4.0")
+		fmt.Println("afisla 0.4.1")
 	default:
 		usage()
 		os.Exit(1)

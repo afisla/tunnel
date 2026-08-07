@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-AFISLA_VERSION="${AFISLA_VERSION:-v0.4.0}"
+AFISLA_VERSION="${AFISLA_VERSION:-v0.4.1}"
 DOWNLOAD_HOST="${AFISLA_HOST:-https://github.com/afisla/tunnel/releases/download/$AFISLA_VERSION}"
 BIN_NAME="afisla"
 INSTALL_DIR="${AFISLA_DIR:-/usr/local/bin}"
