@@ -62,7 +62,7 @@ Or manually:
 
 ```bash
 # Download binary from GitHub releases
-sudo curl -fsSLo /usr/local/bin/afisla https://github.com/afisla/tunnel/releases/download/v0.4.0/afisla-linux-amd64
+sudo curl -fsSLo /usr/local/bin/afisla https://github.com/afisla/tunnel/releases/download/v0.4.1/afisla-linux-amd64
 sudo chmod +x /usr/local/bin/afisla
 
 # Run
